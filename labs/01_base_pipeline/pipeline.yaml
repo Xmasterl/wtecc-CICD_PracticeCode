@@ -1,6 +1,79 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
-metadata:  
-  name: <place-name-here>
+metadata:
+  name: hello-pipeline
 spec:
+  params:
+    - name: message
+      type: string
+      description: "The message to echo"
+      default: "default message"
   tasks:
+    - name: hello
+      params:
+        - name: message
+          value: $(params.message)
+      taskRef:
+        name: echo
+# If kubernetes is installed, you can run the following command to create the pipeline:
+# kubectl apply -f pipeline.yaml
+# kubectl get pipelines
+# And to run the pipeline (with tekton cli installed):
+# tkn pipeline start --showlog hello-pipeline
+# tkn pipeline start hello-pipeline --showlog -p message="Hello world"
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: cd-pipeline
+spec:
+  params:
+    - name: repo-url
+      type: string
+      description: "The URL of the repository to clone"
+    - name: branch
+      type: string
+      description: "The branch to checkout"
+      default: "master"
+  tasks:
+    - name: clone
+      params:
+        - name: repo-url
+          value: $(params.repo-url)
+        - name: branch
+          value: $(params.branch)
+      taskRef:
+        name: checkout
+    - name: lint
+      runAfter:
+        - clone
+      params:
+        - name: message
+          value: "Calling flake8 linter..."
+      taskRef:
+        name: echo
+    - name: tests
+      runAfter:
+        - lint
+      params:
+        - name: message
+          value: "Running unit tests with PyUnit..."
+      taskRef:
+        name: echo
+    - name: build
+      runAfter:
+        - tests
+      params:
+        - name: message
+          value: "Building image for $(params.repo-url)..."
+      taskRef:
+        name: echo
+    - name: deploy
+      runAfter:
+        - build
+      params:
+        - name: message
+          value: "Deploying $(params.branch) branch of $(params.repo-url)..."
+      taskRef:
+        name: echo
+# tkn pipeline start cd-pipeline --showlog -p repo-url="https://github.com/ibm-developer-skills-network/wtecc-CICD_PracticeCode.git" -p branch="main"

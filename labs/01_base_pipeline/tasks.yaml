@@ -1,6 +1,42 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: <place-name-here>
+  name: echo
 spec:
+  params:
+    - name: message
+      type: string
+      description: "The message to echo"
   steps:
+    - name: echo-message
+      image: alpine:3
+      command:
+        - /bin/echo
+      args:
+        - "$(params.message)"
+# If kubernetes is installed, you can run the following command to create the task:
+# kubectl apply -f tasks.yaml
+# kubectl get tasks
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: checkout
+spec:
+  params:
+    - name: repo-url
+      type: string
+      description: "The URL of the repository to clone"
+    - name: branch
+      type: string
+      description: "The branch to checkout"
+      default: "main"
+  steps:
+    - name: checkout
+      image: bitnami/git:latest
+      command:
+        - git
+      args:
+        - clone
+        - $(params.repo-url)
+        - "--branch=$(params.branch)"
